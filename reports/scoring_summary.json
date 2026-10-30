@@ -1,0 +1,27 @@
+{
+  "supplier_count": 1000,
+  "scored_suppliers": 1000,
+  "insufficient_data": 0,
+  "average_score": 83.44,
+  "invalid_records_excluded": {
+    "delivery_records": 1,
+    "inspection_records": 0,
+    "invoice_records": 0,
+    "risk_signal_records": 1
+  },
+  "scoring_weights": {
+    "delivery": 0.3,
+    "quality": 0.25,
+    "cost": 0.15,
+    "capacity": 0.1,
+    "compliance": 0.1,
+    "disruption": 0.1
+  },
+  "notes": [
+    "Missing metrics are excluded and weights are renormalized.",
+    "Cost compares verified invoices with matching PO amounts and currency.",
+    "Capacity uses monthly PO-line quantities compared with monthly supplier capacity.",
+    "Invalid delivery dates and risk signals are excluded.",
+    "Ground-truth anomaly labels are not used as scoring features."
+  ]
+}

@@ -1,0 +1,2 @@
+site_id,supplier_id,site_name,city,country,effective_from,effective_to,status
+SITE-SUP-000001-01,SUP-000002,SUP-000001 Site 1,Mumbai,India,2020-01-01,,ACTIVE

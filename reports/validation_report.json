@@ -1,0 +1,190 @@
+{
+    "total_checks": 25,
+    "passed_checks": 20,
+    "failed_checks": 5,
+    "expected_anomalies_detected": 5,
+    "unexpected_failures": 0,
+    "validation_status": "PASSED",
+    "results": [
+        {
+            "check": "Suppliers primary key uniqueness",
+            "passed": true,
+            "duplicate_count": 0,
+            "classification": "PASSED"
+        },
+        {
+            "check": "Sites primary key uniqueness",
+            "passed": true,
+            "duplicate_count": 0,
+            "classification": "PASSED"
+        },
+        {
+            "check": "PurchaseOrders primary key uniqueness",
+            "passed": true,
+            "duplicate_count": 0,
+            "classification": "PASSED"
+        },
+        {
+            "check": "POLines primary key uniqueness",
+            "passed": true,
+            "duplicate_count": 0,
+            "classification": "PASSED"
+        },
+        {
+            "check": "Shipments primary key uniqueness",
+            "passed": true,
+            "duplicate_count": 0,
+            "classification": "PASSED"
+        },
+        {
+            "check": "ShipmentLine primary key uniqueness",
+            "passed": true,
+            "duplicate_count": 0,
+            "classification": "PASSED"
+        },
+        {
+            "check": "Inspections primary key uniqueness",
+            "passed": true,
+            "duplicate_count": 0,
+            "classification": "PASSED"
+        },
+        {
+            "check": "Invoices primary key uniqueness",
+            "passed": true,
+            "duplicate_count": 0,
+            "classification": "PASSED"
+        },
+        {
+            "check": "RiskSignals primary key uniqueness",
+            "passed": true,
+            "duplicate_count": 0,
+            "classification": "PASSED"
+        },
+        {
+            "check": "Sites foreign key integrity",
+            "passed": true,
+            "invalid_count": 0,
+            "invalid_values": [],
+            "classification": "PASSED"
+        },
+        {
+            "check": "PurchaseOrders foreign key integrity",
+            "passed": true,
+            "invalid_count": 0,
+            "invalid_values": [],
+            "classification": "PASSED"
+        },
+        {
+            "check": "PurchaseOrders foreign key integrity",
+            "passed": true,
+            "invalid_count": 0,
+            "invalid_values": [],
+            "classification": "PASSED"
+        },
+        {
+            "check": "POLines foreign key integrity",
+            "passed": true,
+            "invalid_count": 0,
+            "invalid_values": [],
+            "classification": "PASSED"
+        },
+        {
+            "check": "ShipmentLine foreign key integrity",
+            "passed": true,
+            "invalid_count": 0,
+            "invalid_values": [],
+            "classification": "PASSED"
+        },
+        {
+            "check": "ShipmentLine foreign key integrity",
+            "passed": true,
+            "invalid_count": 0,
+            "invalid_values": [],
+            "classification": "PASSED"
+        },
+        {
+            "check": "DeliveryEvents foreign key integrity",
+            "passed": true,
+            "invalid_count": 0,
+            "invalid_values": [],
+            "classification": "PASSED"
+        },
+        {
+            "check": "Inspections foreign key integrity",
+            "passed": true,
+            "invalid_count": 0,
+            "invalid_values": [],
+            "classification": "PASSED"
+        },
+        {
+            "check": "Inspections foreign key integrity",
+            "passed": true,
+            "invalid_count": 0,
+            "invalid_values": [],
+            "classification": "PASSED"
+        },
+        {
+            "check": "Inspection quantity reconciliation",
+            "passed": true,
+            "invalid_count": 0,
+            "classification": "PASSED"
+        },
+        {
+            "check": "Delivery date must not precede dispatch",
+            "passed": false,
+            "invalid_count": 1,
+            "invalid_records": [
+                "SHP-2026-ANOM002"
+            ],
+            "classification": "EXPECTED_ANOMALY_DETECTED",
+            "expected_anomaly": true
+        },
+        {
+            "check": "Supplier site relationship",
+            "passed": true,
+            "invalid_count": 0,
+            "invalid_records": [],
+            "classification": "PASSED"
+        },
+        {
+            "check": "Supplier site conflation",
+            "passed": false,
+            "invalid_count": 1,
+            "invalid_records": [
+                "SITE-SUP-000001-01"
+            ],
+            "classification": "EXPECTED_ANOMALY_DETECTED",
+            "expected_anomaly": true
+        },
+        {
+            "check": "Risk signal source and timestamp",
+            "passed": false,
+            "invalid_count": 1,
+            "invalid_records": [
+                "RSK-SUP-000001-2026-01"
+            ],
+            "classification": "EXPECTED_ANOMALY_DETECTED",
+            "expected_anomaly": true
+        },
+        {
+            "check": "Shipment purchase order relationship",
+            "passed": false,
+            "invalid_count": 1,
+            "invalid_records": [
+                "SHP-2026-ANOM001"
+            ],
+            "classification": "EXPECTED_ANOMALY_DETECTED",
+            "expected_anomaly": true
+        },
+        {
+            "check": "Supplier score future data leakage",
+            "passed": false,
+            "invalid_count": 1,
+            "invalid_records": [
+                "SCORE-2026-ANOM003"
+            ],
+            "classification": "EXPECTED_ANOMALY_DETECTED",
+            "expected_anomaly": true
+        }
+    ]
+}
