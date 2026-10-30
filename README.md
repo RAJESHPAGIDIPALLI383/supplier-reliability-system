@@ -254,3 +254,16 @@ The objective is to demonstrate how structured data generation, relational datab
 **Language:** Python  
 **Database:** SQLite  
 **Testing:** Pytest
+## Dashboard Screenshots
+
+### 1. Overview Dashboard
+![Overview Dashboard](screenshots/overview.png)
+
+### 2. Suppliers Dashboard
+![Suppliers Dashboard](screenshots/suppliers.png)
+
+### 3. Risk & Anomalies
+![Risk and Anomalies](screenshots/risk-anomalies.png)
+
+### 4. Data Explorer
+![Data Explorer](screenshots/data-explorer.png)
