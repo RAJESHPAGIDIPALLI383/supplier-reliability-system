@@ -132,7 +132,7 @@ supplier-reliability-system/
 Clone the repository:
 
 ```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
+git clone https://github.com/RAJESHPAGIDIPALLI383/supplier-reliability-system.git
 cd supplier-reliability-system
 ```
 
@@ -223,6 +223,7 @@ The tests cover:
 
 - `docs/schema.md` - Database structure and relationships.
 - `docs/data_dictionary.md` - Dataset columns and descriptions.
+- `docs/source_manifest.md` - Synthetic data sources, generation details, and reproducibility information.
 
 ## 13. Future Improvements
 
