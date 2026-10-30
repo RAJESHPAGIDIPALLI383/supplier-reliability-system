@@ -5,474 +5,536 @@ import sqlite3
 
 from src.config import RAW_DIR, PROCESSED_DIR, DATABASE_DIR
 
+DB_PATH = DATABASE_DIR / "supplier_reliability.db"
+SQL_PATH = DATABASE_DIR / "supplier_reliability_seed.sql"
 
-DATABASE_PATH = DATABASE_DIR / "supplier_reliability.db"
+TABLES = [
+    "suppliers",
+    "sites",
+    "contracts",
+    "purchase_orders",
+    "po_lines",
+    "shipments",
+    "shipment_lines",
+    "delivery_events",
+    "inspections",
+    "invoices",
+    "risk_signals",
+    "supplier_scores",
+    "supplier_score_history",
+]
 
+SCHEMAS = {
+    "suppliers": """
+        supplier_id TEXT PRIMARY KEY,
+        supplier_name TEXT NOT NULL,
+        country TEXT,
+        category TEXT,
+        registration_date TEXT,
+        monthly_capacity_units INTEGER CHECK (
+            monthly_capacity_units IS NULL OR monthly_capacity_units >= 0
+        ),
+        status TEXT
+    """,
 
-TABLES = {
-    "suppliers": "suppliers.csv",
-    "sites": "sites.csv",
-    "contracts": "contracts.csv",
-    "purchase_orders": "purchase_orders.csv",
-    "po_lines": "po_lines.csv",
-    "shipments": "shipments.csv",
-    "shipment_lines": "shipment_lines.csv",
-    "delivery_events": "delivery_events.csv",
-    "inspections": "inspections.csv",
-    "invoices": "invoices.csv",
-    "risk_signals": "risk_signals.csv",
+    "sites": """
+        site_id TEXT PRIMARY KEY,
+        supplier_id TEXT NOT NULL,
+        site_name TEXT,
+        city TEXT,
+        country TEXT,
+        effective_from TEXT,
+        effective_to TEXT,
+        status TEXT CHECK (status IS NULL OR status = 'ACTIVE'),
+        CHECK (
+            effective_to IS NULL OR effective_from IS NULL
+            OR effective_to >= effective_from
+        ),
+        UNIQUE (site_id, supplier_id),
+        FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id)
+    """,
+
+    "contracts": """
+        contract_id TEXT PRIMARY KEY,
+        supplier_id TEXT NOT NULL,
+        contract_start_date TEXT,
+        contract_end_date TEXT,
+        contract_value REAL CHECK (
+            contract_value IS NULL OR contract_value >= 0
+        ),
+        currency TEXT,
+        compliance_status TEXT CHECK (
+            compliance_status IS NULL OR compliance_status IN (
+                'COMPLIANT', 'NON_COMPLIANT', 'PENDING'
+            )
+        ),
+        status TEXT CHECK (status IS NULL OR status = 'ACTIVE'),
+        CHECK (
+            contract_end_date IS NULL OR contract_start_date IS NULL
+            OR contract_end_date >= contract_start_date
+        ),
+        UNIQUE (contract_id, supplier_id),
+        FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id)
+    """,
+
+    "purchase_orders": """
+        po_id TEXT PRIMARY KEY,
+        supplier_id TEXT NOT NULL,
+        site_id TEXT NOT NULL,
+        contract_id TEXT NOT NULL,
+        order_date TEXT,
+        required_date TEXT,
+        currency TEXT,
+        total_amount REAL CHECK (
+            total_amount IS NULL OR total_amount >= 0
+        ),
+        status TEXT CHECK (
+            status IS NULL OR status IN (
+                'APPROVED', 'COMPLETED', 'PARTIALLY_DELIVERED'
+            )
+        ),
+        CHECK (
+            required_date IS NULL OR order_date IS NULL
+            OR required_date >= order_date
+        ),
+        FOREIGN KEY (site_id, supplier_id)
+            REFERENCES sites(site_id, supplier_id),
+        FOREIGN KEY (contract_id, supplier_id)
+            REFERENCES contracts(contract_id, supplier_id),
+        FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id)
+    """,
+
+    "po_lines": """
+        po_line_id TEXT PRIMARY KEY,
+        po_id TEXT NOT NULL,
+        item_code TEXT,
+        ordered_quantity INTEGER CHECK (
+            ordered_quantity IS NULL OR ordered_quantity >= 0
+        ),
+        unit_price REAL CHECK (unit_price IS NULL OR unit_price >= 0),
+        line_amount REAL CHECK (line_amount IS NULL OR line_amount >= 0),
+        UNIQUE (po_line_id, po_id),
+        FOREIGN KEY (po_id) REFERENCES purchase_orders(po_id)
+    """,
+
+    "shipments": """
+        shipment_id TEXT PRIMARY KEY,
+        supplier_id TEXT NOT NULL,
+        po_id TEXT NOT NULL,
+        dispatch_date TEXT,
+        expected_delivery_date TEXT,
+        actual_delivery_date TEXT,
+        carrier_name TEXT,
+        status TEXT CHECK (status IS NULL OR status = 'DELIVERED'),
+        CHECK (
+            actual_delivery_date IS NULL OR dispatch_date IS NULL
+            OR actual_delivery_date >= dispatch_date
+        ),
+        UNIQUE (shipment_id, po_id),
+        FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id),
+        FOREIGN KEY (po_id) REFERENCES purchase_orders(po_id)
+    """,
+
+    "shipment_lines": """
+        shipment_line_id TEXT PRIMARY KEY,
+        shipment_id TEXT NOT NULL,
+        po_line_id TEXT NOT NULL,
+        shipped_quantity INTEGER CHECK (
+            shipped_quantity IS NULL OR shipped_quantity >= 0
+        ),
+        FOREIGN KEY (shipment_id) REFERENCES shipments(shipment_id),
+        FOREIGN KEY (po_line_id) REFERENCES po_lines(po_line_id)
+    """,
+
+    "delivery_events": """
+        delivery_event_id TEXT PRIMARY KEY,
+        shipment_id TEXT NOT NULL,
+        event_type TEXT,
+        event_timestamp TEXT,
+        location TEXT,
+        source TEXT,
+        FOREIGN KEY (shipment_id) REFERENCES shipments(shipment_id)
+    """,
+
+    "inspections": """
+        inspection_id TEXT PRIMARY KEY,
+        supplier_id TEXT NOT NULL,
+        shipment_id TEXT NOT NULL,
+        po_line_id TEXT NOT NULL,
+        inspection_date TEXT,
+        inspected_quantity INTEGER CHECK (
+            inspected_quantity IS NULL OR inspected_quantity >= 0
+        ),
+        accepted_quantity INTEGER CHECK (
+            accepted_quantity IS NULL OR accepted_quantity >= 0
+        ),
+        rejected_quantity INTEGER CHECK (
+            rejected_quantity IS NULL OR rejected_quantity >= 0
+        ),
+        defect_category TEXT,
+        status TEXT CHECK (
+            status IS NULL OR status IN ('PARTIAL', 'PASSED')
+        ),
+        CHECK (
+            inspected_quantity IS NULL OR accepted_quantity IS NULL
+            OR rejected_quantity IS NULL
+            OR inspected_quantity = accepted_quantity + rejected_quantity
+        ),
+        FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id),
+        FOREIGN KEY (shipment_id) REFERENCES shipments(shipment_id),
+        FOREIGN KEY (po_line_id) REFERENCES po_lines(po_line_id)
+    """,
+
+    "invoices": """
+        invoice_id TEXT PRIMARY KEY,
+        supplier_id TEXT NOT NULL,
+        po_id TEXT NOT NULL,
+        invoice_date TEXT,
+        invoice_amount REAL CHECK (
+            invoice_amount IS NULL OR invoice_amount >= 0
+        ),
+        currency TEXT,
+        status TEXT CHECK (status IS NULL OR status = 'VERIFIED'),
+        FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id),
+        FOREIGN KEY (po_id) REFERENCES purchase_orders(po_id)
+    """,
+
+    "risk_signals": """
+        risk_signal_id TEXT PRIMARY KEY,
+        supplier_id TEXT NOT NULL,
+        site_id TEXT,
+        risk_type TEXT,
+        severity TEXT CHECK (
+            severity IS NULL OR severity IN (
+                'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
+            )
+        ),
+        source TEXT,
+        observed_at TEXT,
+        status TEXT CHECK (status IS NULL OR status = 'OPEN'),
+        FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id),
+        FOREIGN KEY (site_id) REFERENCES sites(site_id)
+    """,
+
+    "supplier_scores": """
+        supplier_id TEXT PRIMARY KEY,
+        score_id TEXT,
+        scoring_period TEXT,
+        data_as_of_date TEXT,
+        score_generated_at TEXT,
+        delivery_score REAL,
+        quality_score REAL,
+        cost_score REAL,
+        capacity_score REAL,
+        compliance_score REAL,
+        disruption_score REAL,
+        data_coverage REAL,
+        final_score REAL,
+        rating TEXT,
+        FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id)
+    """,
+
+    "supplier_score_history": """
+        score_id TEXT PRIMARY KEY,
+        supplier_id TEXT NOT NULL,
+        scoring_period TEXT NOT NULL,
+        data_as_of_date TEXT NOT NULL,
+        score_generated_at TEXT NOT NULL,
+        delivery_score REAL,
+        quality_score REAL,
+        cost_score REAL,
+        capacity_score REAL,
+        compliance_score REAL,
+        disruption_score REAL,
+        data_coverage REAL CHECK (
+            data_coverage IS NULL OR data_coverage BETWEEN 0 AND 100
+        ),
+        final_score REAL CHECK (
+            final_score IS NULL OR final_score BETWEEN 0 AND 100
+        ),
+        rating TEXT,
+        UNIQUE (supplier_id, scoring_period),
+        FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id)
+    """,
 }
 
 
-# --------------------------------------------------
-# 1. CREATE DATABASE AND TABLE STRUCTURE
-# --------------------------------------------------
-
-def create_database():
+def connect_database():
     DATABASE_DIR.mkdir(parents=True, exist_ok=True)
 
-    connection = sqlite3.connect(DATABASE_PATH)
+    connection = sqlite3.connect(DB_PATH)
     connection.execute("PRAGMA foreign_keys = ON")
 
-    connection.executescript("""
-        CREATE TABLE IF NOT EXISTS suppliers (
-            supplier_id TEXT PRIMARY KEY
-        );
-
-        CREATE TABLE IF NOT EXISTS sites (
-            site_id TEXT PRIMARY KEY,
-            supplier_id TEXT,
-            FOREIGN KEY (supplier_id)
-                REFERENCES suppliers(supplier_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS contracts (
-            contract_id TEXT PRIMARY KEY,
-            supplier_id TEXT,
-            FOREIGN KEY (supplier_id)
-                REFERENCES suppliers(supplier_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS purchase_orders (
-            po_id TEXT PRIMARY KEY,
-            supplier_id TEXT,
-            site_id TEXT,
-            FOREIGN KEY (supplier_id)
-                REFERENCES suppliers(supplier_id),
-            FOREIGN KEY (site_id)
-                REFERENCES sites(site_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS po_lines (
-            po_line_id TEXT PRIMARY KEY,
-            po_id TEXT,
-            FOREIGN KEY (po_id)
-                REFERENCES purchase_orders(po_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS shipments (
-            shipment_id TEXT PRIMARY KEY,
-            po_id TEXT,
-            supplier_id TEXT,
-            FOREIGN KEY (po_id)
-                REFERENCES purchase_orders(po_id),
-            FOREIGN KEY (supplier_id)
-                REFERENCES suppliers(supplier_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS shipment_lines (
-            shipment_line_id TEXT PRIMARY KEY,
-            shipment_id TEXT,
-            po_line_id TEXT,
-            FOREIGN KEY (shipment_id)
-                REFERENCES shipments(shipment_id),
-            FOREIGN KEY (po_line_id)
-                REFERENCES po_lines(po_line_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS delivery_events (
-            event_id TEXT PRIMARY KEY,
-            shipment_id TEXT,
-            FOREIGN KEY (shipment_id)
-                REFERENCES shipments(shipment_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS inspections (
-            inspection_id TEXT PRIMARY KEY,
-            supplier_id TEXT,
-            shipment_id TEXT,
-            FOREIGN KEY (supplier_id)
-                REFERENCES suppliers(supplier_id),
-            FOREIGN KEY (shipment_id)
-                REFERENCES shipments(shipment_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS invoices (
-            invoice_id TEXT PRIMARY KEY,
-            po_id TEXT,
-            supplier_id TEXT,
-            FOREIGN KEY (po_id)
-                REFERENCES purchase_orders(po_id),
-            FOREIGN KEY (supplier_id)
-                REFERENCES suppliers(supplier_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS risk_signals (
-            risk_signal_id TEXT PRIMARY KEY,
-            supplier_id TEXT,
-            FOREIGN KEY (supplier_id)
-                REFERENCES suppliers(supplier_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS supplier_scores (
-            score_id TEXT PRIMARY KEY,
-            supplier_id TEXT,
-            FOREIGN KEY (supplier_id)
-                REFERENCES suppliers(supplier_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS data_quality_exceptions (
-            exception_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            source_file TEXT,
-            source_table TEXT,
-            record_data TEXT,
-            error_message TEXT
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_sites_supplier
-        ON sites(supplier_id);
-
-        CREATE INDEX IF NOT EXISTS idx_orders_supplier
-        ON purchase_orders(supplier_id);
-
-        CREATE INDEX IF NOT EXISTS idx_shipments_po
-        ON shipments(po_id);
-
-        CREATE INDEX IF NOT EXISTS idx_inspections_supplier
-        ON inspections(supplier_id);
-
-        CREATE INDEX IF NOT EXISTS idx_risks_supplier
-        ON risk_signals(supplier_id);
-    """)
-
-    connection.commit()
     return connection
 
 
-# --------------------------------------------------
-# 2. AUTOMATICALLY ADD MISSING CSV COLUMNS
-# --------------------------------------------------
+def create_database(connection):
+    cursor = connection.cursor()
 
-def ensure_csv_columns(connection, table_name, columns):
+    cursor.execute("DROP TABLE IF EXISTS data_quality_exceptions")
 
-    existing_columns = {
-        row[1]
-        for row in connection.execute(
-            f'PRAGMA table_info("{table_name}")'
-        ).fetchall()
-    }
+    cursor.execute("""
+        CREATE TABLE data_quality_exceptions (
+            exception_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_file TEXT NOT NULL,
+            target_table TEXT NOT NULL,
+            record_json TEXT NOT NULL,
+            error_message TEXT NOT NULL
+        )
+    """)
 
-    for column in columns:
+    for table in reversed(TABLES):
+        cursor.execute(f"DROP TABLE IF EXISTS {table}")
 
-        if column not in existing_columns:
+    for table in TABLES:
+        cursor.execute(
+            f"CREATE TABLE {table} ({SCHEMAS[table]})"
+        )
 
-            safe_column = column.replace('"', '""')
+    indexes = [
+        "CREATE INDEX idx_sites_supplier ON sites(supplier_id)",
+        "CREATE INDEX idx_contracts_supplier ON contracts(supplier_id)",
+        "CREATE INDEX idx_po_supplier ON purchase_orders(supplier_id)",
+        "CREATE INDEX idx_po_site ON purchase_orders(site_id)",
+        "CREATE INDEX idx_shipments_po ON shipments(po_id)",
+        "CREATE INDEX idx_events_shipment ON delivery_events(shipment_id)",
+        "CREATE INDEX idx_inspections_supplier ON inspections(supplier_id)",
+        "CREATE INDEX idx_risks_supplier ON risk_signals(supplier_id)",
+        "CREATE INDEX idx_score_history_supplier ON supplier_score_history(supplier_id)",
+        "CREATE INDEX idx_score_history_period ON supplier_score_history(scoring_period)",
+    ]
 
-            connection.execute(
-                f'ALTER TABLE "{table_name}" '
-                f'ADD COLUMN "{safe_column}" TEXT'
-            )
+    for statement in indexes:
+        cursor.execute(statement)
+
+    cursor.execute("""
+        CREATE TRIGGER validate_shipment_supplier
+        BEFORE INSERT ON shipments
+        FOR EACH ROW
+        WHEN NOT EXISTS (
+            SELECT 1
+            FROM purchase_orders po
+            WHERE po.po_id = NEW.po_id
+              AND po.supplier_id = NEW.supplier_id
+        )
+        BEGIN
+            SELECT RAISE(ABORT, 'Shipment supplier does not match PO supplier');
+        END
+    """)
+
+    cursor.execute("""
+        CREATE TRIGGER validate_invoice_supplier
+        BEFORE INSERT ON invoices
+        FOR EACH ROW
+        WHEN NOT EXISTS (
+            SELECT 1
+            FROM purchase_orders po
+            WHERE po.po_id = NEW.po_id
+              AND po.supplier_id = NEW.supplier_id
+        )
+        BEGIN
+            SELECT RAISE(ABORT, 'Invoice supplier does not match PO supplier');
+        END
+    """)
+
+    cursor.execute("""
+        CREATE TRIGGER validate_risk_site_supplier
+        BEFORE INSERT ON risk_signals
+        FOR EACH ROW
+        WHEN NEW.site_id IS NOT NULL
+         AND NOT EXISTS (
+            SELECT 1
+            FROM sites s
+            WHERE s.site_id = NEW.site_id
+              AND s.supplier_id = NEW.supplier_id
+        )
+        BEGIN
+            SELECT RAISE(ABORT, 'Risk signal site does not match supplier');
+        END
+    """)
+
+    cursor.execute("""
+        CREATE TRIGGER validate_shipment_line_po
+        BEFORE INSERT ON shipment_lines
+        FOR EACH ROW
+        WHEN NOT EXISTS (
+            SELECT 1
+            FROM shipments sh
+            JOIN po_lines pl ON pl.po_id = sh.po_id
+            WHERE sh.shipment_id = NEW.shipment_id
+              AND pl.po_line_id = NEW.po_line_id
+        )
+        BEGIN
+            SELECT RAISE(ABORT, 'Shipment line PO line does not match shipment PO');
+        END
+    """)
+
+    cursor.execute("""
+        CREATE TRIGGER validate_inspection_relationships
+        BEFORE INSERT ON inspections
+        FOR EACH ROW
+        WHEN NOT EXISTS (
+            SELECT 1
+            FROM shipments sh
+            JOIN po_lines pl ON pl.po_id = sh.po_id
+            WHERE sh.shipment_id = NEW.shipment_id
+              AND sh.supplier_id = NEW.supplier_id
+              AND pl.po_line_id = NEW.po_line_id
+        )
+        BEGIN
+            SELECT RAISE(ABORT, 'Inspection supplier or PO line does not match shipment');
+        END
+    """)
+
+    connection.commit()
 
 
-# --------------------------------------------------
-# 3. IMPORT CSV DATA
-# --------------------------------------------------
+def import_csv(connection, filename, table, directory=RAW_DIR):
+    path = directory / filename
 
-def import_csv(connection, table_name, filename):
+    if not path.exists():
+        print(f"File not found: {path}")
+        return 0, 0
 
-    file_path = RAW_DIR / filename
+    imported = 0
+    quarantined = 0
 
-    if not file_path.exists():
-        print(f"Skipped: {filename} not found")
-        return 0
-
-    with open(
-        file_path,
-        "r",
-        encoding="utf-8-sig",
-        newline=""
-    ) as file:
-
+    with open(path, "r", encoding="utf-8-sig", newline="") as file:
         reader = csv.DictReader(file)
-        columns = reader.fieldnames
-
-        if not columns:
-            print(f"Skipped: {filename} has no columns")
-            return 0
-
-        ensure_csv_columns(
-            connection,
-            table_name,
-            columns
-        )
-
-        placeholders = ", ".join(
-            ["?"] * len(columns)
-        )
-
-        column_names = ", ".join(
-            '"' + column.replace('"', '""') + '"'
-            for column in columns
-        )
-
-        query = (
-            f'INSERT OR REPLACE INTO "{table_name}" '
-            f"({column_names}) VALUES ({placeholders})"
-        )
-
-        imported = 0
-        rejected = 0
 
         for row in reader:
+            columns = list(row.keys())
+            placeholders = ", ".join(["?"] * len(columns))
+            column_names = ", ".join(columns)
+            values = [row[column] or None for column in columns]
+
+            sql = (
+                f"INSERT INTO {table} ({column_names}) "
+                f"VALUES ({placeholders})"
+            )
 
             try:
-                connection.execute(
-                    query,
-                    tuple(row[column] for column in columns)
-                )
-
+                connection.execute(sql, values)
                 imported += 1
 
             except sqlite3.IntegrityError as error:
-
                 connection.execute(
                     """
                     INSERT INTO data_quality_exceptions (
                         source_file,
-                        source_table,
-                        record_data,
+                        target_table,
+                        record_json,
                         error_message
                     )
                     VALUES (?, ?, ?, ?)
                     """,
                     (
                         filename,
-                        table_name,
+                        table,
                         json.dumps(row),
-                        str(error)
-                    )
+                        str(error),
+                    ),
                 )
 
-                rejected += 1
+                quarantined += 1
 
-        connection.commit()
+    connection.commit()
 
     print(
-        f"{table_name}: "
-        f"Imported={imported}, "
-        f"Quarantined={rejected}"
+        f"{table}: Imported={imported}, "
+        f"Quarantined={quarantined}"
     )
 
-    return imported
+    return imported, quarantined
 
-
-# --------------------------------------------------
-# 4. IMPORT SUPPLIER SCORES
-# --------------------------------------------------
-
-def import_supplier_scores(connection):
-
-    file_path = PROCESSED_DIR / "supplier_scores.csv"
-
-    if not file_path.exists():
-        print(
-            "Skipped supplier scores. "
-            "Run scoring before database import."
-        )
-        return 0
-
-    with open(
-        file_path,
-        "r",
-        encoding="utf-8-sig",
-        newline=""
-    ) as file:
-
-        reader = csv.DictReader(file)
-        columns = reader.fieldnames
-
-        if not columns:
-            return 0
-
-        ensure_csv_columns(
-            connection,
-            "supplier_scores",
-            columns
-        )
-
-        placeholders = ", ".join(
-            ["?"] * len(columns)
-        )
-
-        column_names = ", ".join(
-            '"' + column.replace('"', '""') + '"'
-            for column in columns
-        )
-
-        query = (
-            'INSERT OR REPLACE INTO supplier_scores '
-            f"({column_names}) VALUES ({placeholders})"
-        )
-
-        imported = 0
-
-        for row in reader:
-
-            try:
-                connection.execute(
-                    query,
-                    tuple(row[column] for column in columns)
-                )
-
-                imported += 1
-
-            except sqlite3.IntegrityError as error:
-
-                connection.execute(
-                    """
-                    INSERT INTO data_quality_exceptions (
-                        source_file,
-                        source_table,
-                        record_data,
-                        error_message
-                    )
-                    VALUES (?, ?, ?, ?)
-                    """,
-                    (
-                        "supplier_scores.csv",
-                        "supplier_scores",
-                        json.dumps(row),
-                        str(error)
-                    )
-                )
-
-        connection.commit()
-
-    print(f"supplier_scores: Imported={imported}")
-
-    return imported
-
-
-# --------------------------------------------------
-# 5. DATABASE SUMMARY
-# --------------------------------------------------
 
 def show_database_summary(connection):
+    print("\nDATABASE SUMMARY")
+    print("-" * 50)
 
-    print("\nDATABASE TABLE SUMMARY")
-    print("-" * 45)
+    total_records = 0
 
-    tables = list(TABLES.keys())
-    tables.extend([
-        "supplier_scores",
-        "data_quality_exceptions"
-    ])
-
-    for table in tables:
-
-        result = connection.execute(
-            f'SELECT COUNT(*) FROM "{table}"'
-        ).fetchone()
-
-        print(f"{table}: {result[0]} records")
-
-
-# --------------------------------------------------
-# 6. LOAD ALL DATA
-# --------------------------------------------------
-
-def load_all_data():
-
-    connection = create_database()
-
-    try:
-
-        # Reload data consistently on every run.
-        connection.execute("PRAGMA foreign_keys = OFF")
-
-        for table in [
-            "supplier_scores",
-            "data_quality_exceptions",
-            "risk_signals",
-            "invoices",
-            "inspections",
-            "delivery_events",
-            "shipment_lines",
-            "shipments",
-            "po_lines",
-            "purchase_orders",
-            "contracts",
-            "sites",
-            "suppliers"
-        ]:
-            connection.execute(
-                f'DELETE FROM "{table}"'
-            )
-
-        connection.commit()
-        connection.execute("PRAGMA foreign_keys = ON")
-
-        total_rows = 0
-
-        # Import parent tables before dependent tables.
-        for table_name, filename in TABLES.items():
-
-            total_rows += import_csv(
-                connection,
-                table_name,
-                filename
-            )
-
-        total_rows += import_supplier_scores(connection)
-
-        show_database_summary(connection)
-
-        print("\n" + "=" * 45)
-        print("DATABASE IMPORT COMPLETED")
-        print("=" * 45)
-
-        print(f"Database: {DATABASE_PATH}")
-        print(f"Imported records: {total_rows}")
-
-        exceptions = connection.execute(
-            """
-            SELECT COUNT(*)
-            FROM data_quality_exceptions
-            """
+    for table in TABLES:
+        count = connection.execute(
+            f"SELECT COUNT(*) FROM {table}"
         ).fetchone()[0]
 
-        print(f"Quarantined records: {exceptions}")
+        total_records += count
+        print(f"{table}: {count}")
 
-    finally:
-        connection.close()
+    quarantined = connection.execute(
+        "SELECT COUNT(*) FROM data_quality_exceptions"
+    ).fetchone()[0]
 
-def export_sql():
-    DATABASE_DIR.mkdir(parents=True, exist_ok=True)
+    print(f"data_quality_exceptions: {quarantined}")
+    print(f"\nImported records: {total_records}")
+    print(f"Quarantined records: {quarantined}")
 
-    sql_path = DATABASE_DIR / "supplier_reliability_seed.sql"
+    violations = connection.execute(
+        "PRAGMA foreign_key_check"
+    ).fetchall()
 
-    connection = sqlite3.connect(DATABASE_PATH)
+    print(f"Foreign key violations: {len(violations)}")
+
+
+def export_sql(connection):
+    with open(SQL_PATH, "w", encoding="utf-8") as file:
+        for statement in connection.iterdump():
+            file.write(statement + "\n")
+
+    print(f"SQL export created: {SQL_PATH}")
+
+
+def load_all_data():
+    connection = connect_database()
 
     try:
-        with open(sql_path, "w", encoding="utf-8") as file:
-            for line in connection.iterdump():
-                file.write(line + "\n")
+        create_database(connection)
 
-        print(f"SQL export created: {sql_path}")
+        import_order = [
+            ("suppliers.csv", "suppliers"),
+            ("sites.csv", "sites"),
+            ("contracts.csv", "contracts"),
+            ("purchase_orders.csv", "purchase_orders"),
+            ("po_lines.csv", "po_lines"),
+            ("shipments.csv", "shipments"),
+            ("shipment_lines.csv", "shipment_lines"),
+            ("delivery_events.csv", "delivery_events"),
+            ("inspections.csv", "inspections"),
+            ("invoices.csv", "invoices"),
+            ("risk_signals.csv", "risk_signals"),
+        ]
+
+        for filename, table in import_order:
+            import_csv(connection, filename, table)
+
+        import_csv(
+            connection,
+            "supplier_scores.csv",
+            "supplier_scores",
+            directory=PROCESSED_DIR,
+        )
+
+        import_csv(
+            connection,
+            "supplier_score_history.csv",
+            "supplier_score_history",
+            directory=PROCESSED_DIR,
+        )
+
+        show_database_summary(connection)
+        export_sql(connection)
 
     finally:
         connection.close()
-        
-if __name__ == "__main__":
+
+
+def main():
+    print("SUPPLIER RELIABILITY DATABASE")
+    print("=" * 50)
+
     load_all_data()
-    export_sql()
+
+
+if __name__ == "__main__":
+    main()

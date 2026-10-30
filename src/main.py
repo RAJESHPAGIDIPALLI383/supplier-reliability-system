@@ -28,6 +28,7 @@ def main():
         ("Generate supplier datasets", "src.generate_data"),
         ("Validate generated data", "src.validation"),
         ("Calculate supplier scores", "src.scoring"),
+        ("Evaluate system performance", "src.evaluation"),
         ("Create SQLite database and SQL export", "src.database"),
     ]
 

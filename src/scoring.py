@@ -2,6 +2,7 @@
 import csv
 import json
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 
 from src.config import (
@@ -12,11 +13,22 @@ from src.config import (
 )
 
 
-def read_csv(filename):
-    path = RAW_DIR / filename
+HISTORY_FILE = "supplier_score_history.csv"
+CURRENT_FILE = "supplier_scores.csv"
+
+
+def read_csv_from(directory, filename):
+    path = directory / filename
+
+    if not path.exists():
+        return []
 
     with open(path, "r", encoding="utf-8-sig", newline="") as file:
         return list(csv.DictReader(file))
+
+
+def read_csv(filename):
+    return read_csv_from(RAW_DIR, filename)
 
 
 def write_csv(filename, rows):
@@ -46,10 +58,8 @@ def calculate_delivery_scores(shipments):
     supplier_data = defaultdict(lambda: {"eligible": 0, "on_time": 0})
     invalid_count = 0
 
-    valid_statuses = {"DELIVERED"}
-
     for shipment in shipments:
-        if shipment.get("status") not in valid_statuses:
+        if shipment.get("status") != "DELIVERED":
             continue
 
         supplier_id = shipment.get("supplier_id")
@@ -157,7 +167,7 @@ def calculate_cost_scores(orders, invoices):
         invoice_totals[po_id] += amount
 
     supplier_data = defaultdict(
-        lambda: {"po_amount": 0.0, "variance": 0.0, "matched": 0}
+        lambda: {"po_amount": 0.0, "variance": 0.0}
     )
 
     for po_id, invoice_amount in invoice_totals.items():
@@ -174,7 +184,6 @@ def calculate_cost_scores(orders, invoices):
         supplier_data[supplier_id]["variance"] += abs(
             invoice_amount - po_amount
         )
-        supplier_data[supplier_id]["matched"] += 1
 
     scores = {}
 
@@ -236,16 +245,19 @@ def calculate_capacity_scores(suppliers, orders, po_lines):
 
         utilization_percentage = quantity / capacity * 100
 
-        # Full score up to monthly capacity.
-        # Score decreases above capacity and reaches zero at 200%.
-        score = max(0.0, min(100.0, 200.0 - utilization_percentage))
+        score = max(
+            0.0,
+            min(100.0, 200.0 - utilization_percentage)
+        )
 
         supplier_month_scores[supplier_id].append(score)
 
     scores = {}
 
     for supplier_id, monthly_scores in supplier_month_scores.items():
-        scores[supplier_id] = sum(monthly_scores) / len(monthly_scores)
+        scores[supplier_id] = (
+            sum(monthly_scores) / len(monthly_scores)
+        )
 
     return scores
 
@@ -306,9 +318,145 @@ def calculate_disruption_scores(risk_signals):
 
     for supplier_id, penalties in supplier_data.items():
         average_penalty = sum(penalties) / len(penalties)
-        scores[supplier_id] = max(0.0, 100.0 - average_penalty)
+        scores[supplier_id] = max(
+            0.0,
+            100.0 - average_penalty
+        )
 
     return scores, invalid_count
+
+
+def get_data_as_of_date(data_sources):
+    dates = []
+
+    date_fields = {
+        "purchase_orders": ["order_date"],
+        "shipments": ["dispatch_date", "actual_delivery_date"],
+        "inspections": ["inspection_date"],
+        "invoices": ["invoice_date"],
+        "risk_signals": ["observed_at"],
+    }
+
+    for source_name, fields in date_fields.items():
+        for row in data_sources.get(source_name, []):
+            for field in fields:
+                value = row.get(field)
+
+                if not value:
+                    continue
+
+                date_value = str(value)[:10]
+
+                try:
+                    datetime.strptime(date_value, "%Y-%m-%d")
+                    dates.append(date_value)
+                except ValueError:
+                    continue
+
+    return max(dates) if dates else datetime.now(
+        timezone.utc
+    ).date().isoformat()
+
+
+def load_existing_history():
+    return read_csv_from(PROCESSED_DIR, HISTORY_FILE)
+
+
+def create_score_history(current_rows, scoring_period, data_as_of_date):
+    old_history = load_existing_history()
+
+    history_by_supplier_period = {}
+
+    for row in old_history:
+        key = (
+            row.get("supplier_id"),
+            row.get("scoring_period"),
+        )
+        history_by_supplier_period[key] = row
+
+    year = scoring_period[:4]
+
+    existing_numbers = []
+
+    for row in old_history:
+        score_id = row.get("score_id", "")
+
+        if score_id.startswith(f"SCORE-{year}-"):
+            try:
+                existing_numbers.append(
+                    int(score_id.split("-")[-1])
+                )
+            except ValueError:
+                continue
+
+    next_number = max(existing_numbers, default=0) + 1
+
+    generated_at = datetime.now(timezone.utc).isoformat(
+        timespec="seconds"
+    )
+
+    new_snapshot = []
+
+    for row in sorted(current_rows, key=lambda x: x["supplier_id"]):
+        key = (row["supplier_id"], scoring_period)
+        previous = history_by_supplier_period.get(key)
+
+        if previous:
+            score_id = previous["score_id"]
+            score_generated_at = previous["score_generated_at"]
+        else:
+            score_id = f"SCORE-{year}-{next_number:06d}"
+            score_generated_at = generated_at
+            next_number += 1
+
+        history_row = {
+            "score_id": score_id,
+            "supplier_id": row["supplier_id"],
+            "scoring_period": scoring_period,
+            "data_as_of_date": data_as_of_date,
+            "score_generated_at": score_generated_at,
+            "delivery_score": row["delivery_score"],
+            "quality_score": row["quality_score"],
+            "cost_score": row["cost_score"],
+            "capacity_score": row["capacity_score"],
+            "compliance_score": row["compliance_score"],
+            "disruption_score": row["disruption_score"],
+            "data_coverage": row["data_coverage"],
+            "final_score": row["final_score"],
+            "rating": row["rating"],
+        }
+
+        new_snapshot.append(history_row)
+
+    # Preserve previous scoring periods and replace the current period.
+    current_keys = {
+        (row["supplier_id"], scoring_period)
+        for row in new_snapshot
+    }
+
+    preserved_history = [
+        row for row in old_history
+        if (
+            row.get("supplier_id"),
+            row.get("scoring_period"),
+        ) not in current_keys
+    ]
+
+    complete_history = preserved_history + new_snapshot
+
+    complete_history.sort(
+        key=lambda row: (
+            row.get("scoring_period", ""),
+            row.get("supplier_id", ""),
+        )
+    )
+
+    write_csv(HISTORY_FILE, complete_history)
+
+    # Current snapshot remains compatible with evaluation.py.
+    write_csv(CURRENT_FILE, new_snapshot)
+
+    return new_snapshot, complete_history
 
 
 def calculate_supplier_scores():
@@ -352,7 +500,7 @@ def calculate_supplier_scores():
         "disruption": disruption_scores,
     }
 
-    output = []
+    current_rows = []
 
     for supplier in suppliers:
         supplier_id = supplier["supplier_id"]
@@ -390,7 +538,7 @@ def calculate_supplier_scores():
         else:
             rating = "POOR"
 
-        output.append({
+        current_rows.append({
             "supplier_id": supplier_id,
             "delivery_score": available_metrics.get("delivery", ""),
             "quality_score": available_metrics.get("quality", ""),
@@ -406,10 +554,25 @@ def calculate_supplier_scores():
             "rating": rating,
         })
 
-    write_csv("supplier_scores.csv", output)
+    data_sources = {
+        "purchase_orders": orders,
+        "shipments": shipments,
+        "inspections": inspections,
+        "invoices": invoices,
+        "risk_signals": risk_signals,
+    }
+
+    data_as_of_date = get_data_as_of_date(data_sources)
+    scoring_period = data_as_of_date[:7]
+
+    snapshot, history = create_score_history(
+        current_rows,
+        scoring_period,
+        data_as_of_date,
+    )
 
     scored = [
-        row for row in output
+        row for row in snapshot
         if row["final_score"] != ""
     ]
 
@@ -423,6 +586,9 @@ def calculate_supplier_scores():
         "scored_suppliers": len(scored),
         "insufficient_data": len(suppliers) - len(scored),
         "average_score": round(average_score, 2),
+        "scoring_period": scoring_period,
+        "data_as_of_date": data_as_of_date,
+        "score_history_records": len(history),
         "invalid_records_excluded": {
             "delivery_records": invalid_deliveries,
             "inspection_records": invalid_inspections,
@@ -436,6 +602,8 @@ def calculate_supplier_scores():
             "Capacity uses monthly PO-line quantities compared with monthly supplier capacity.",
             "Invalid delivery dates and risk signals are excluded.",
             "Ground-truth anomaly labels are not used as scoring features.",
+            "Score history is stored separately from the current supplier snapshot.",
+            "Repeated scoring for the same supplier and period reuses its score ID.",
         ],
     }
 

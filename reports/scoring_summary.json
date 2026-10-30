@@ -3,6 +3,9 @@
   "scored_suppliers": 1000,
   "insufficient_data": 0,
   "average_score": 83.44,
+  "scoring_period": "2026-10",
+  "data_as_of_date": "2026-10-30",
+  "score_history_records": 1000,
   "invalid_records_excluded": {
     "delivery_records": 1,
     "inspection_records": 0,
@@ -22,6 +25,8 @@
     "Cost compares verified invoices with matching PO amounts and currency.",
     "Capacity uses monthly PO-line quantities compared with monthly supplier capacity.",
     "Invalid delivery dates and risk signals are excluded.",
-    "Ground-truth anomaly labels are not used as scoring features."
+    "Ground-truth anomaly labels are not used as scoring features.",
+    "Score history is stored separately from the current supplier snapshot.",
+    "Repeated scoring for the same supplier and period reuses its score ID."
   ]
 }
