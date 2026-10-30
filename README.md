@@ -1,5 +1,16 @@
 
-# Supplier Reliability Scoring and Monitoring System
+# Supplier Reliability System
+
+🚀 **Live Demo:** https://supplier-reliability-dashboard.streamlit.app/
+
+A supplier reliability intelligence dashboard built using Python, SQLite and Streamlit.
+
+## Features
+- Supplier performance scoring
+- Risk signal monitoring
+- Data quality validation
+- Interactive dashboard
+- Supplier-level analysis
 
 An explainable, reproducible, and data-driven supplier reliability system that evaluates supplier performance across delivery, quality, cost, capacity, compliance, and disruption risk.
 
