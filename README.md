@@ -14,6 +14,18 @@ A supplier reliability intelligence dashboard built using Python, SQLite and Str
 
 An explainable, reproducible, and data-driven supplier reliability system that evaluates supplier performance across delivery, quality, cost, capacity, compliance, and disruption risk.
 
+## Dashboard Pages
+
+1. Overview
+2. Suppliers
+3. Procurement & Logistics
+4. Quality & Inspection
+5. Risk & Anomalies
+6. Data Explorer
+7. Score Explainability
+8. Score History & Trends
+9. Data Quality & Validation
+
 ## 1. Project Overview
 
 Supplier performance directly affects procurement operations, product quality, delivery timelines, and business continuity.
