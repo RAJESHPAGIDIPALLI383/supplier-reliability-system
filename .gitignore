@@ -14,3 +14,4 @@ build/
 uploads/
 reports/
 .DS_Store
+database/*.db
