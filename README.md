@@ -1,174 +1,138 @@
+# YottaFlex.ai – Data Quality Monitoring System
 
-# Supplier Reliability System
+A full-stack data quality monitoring platform designed to validate supplier data, monitor data pipelines, identify data quality issues, compare datasets against baselines, and generate actionable reports.
 
-🚀 **Live Demo:** https://supplier-reliability-dashboard.streamlit.app/
+## 🚀 Live Application
 
-A supplier reliability intelligence dashboard built using Python, SQLite and Streamlit.
+- **Frontend Dashboard:** https://yottaflex-dashboard.vercel.app
+- **Backend API:** https://yottaflex-api-7smz.onrender.com
+- **API Documentation:** https://yottaflex-api-7smz.onrender.com/docs
+- **Health Check:** https://yottaflex-api-7smz.onrender.com/health
 
-## Features
-- Supplier performance scoring
-- Risk signal monitoring
-- Data quality validation
-- Interactive dashboard
-- Supplier-level analysis
+## 📸 Application Screenshots
 
-An explainable, reproducible, and data-driven supplier reliability system that evaluates supplier performance across delivery, quality, cost, capacity, compliance, and disruption risk.
+Screenshots of the YottaFlex.ai dashboard and its major features.
 
-## Dashboard Pages
+> Add your actual screenshots to the `screenshots/` directory and update these image paths to match their filenames.
 
-1. Overview
-2. Suppliers
-3. Procurement & Logistics
-4. Quality & Inspection
-5. Risk & Anomalies
-6. Data Explorer
-7. Score Explainability
-8. Score History & Trends
-9. Data Quality & Validation
+### Dashboard
+## 📸 Application Screenshots
 
-## 1. Project Overview
+### 1. Login Page
+![Login Page](screenshots/login-page.png)
 
-Supplier performance directly affects procurement operations, product quality, delivery timelines, and business continuity.
+### 2. Dashboard Overview
+![Dashboard Overview](screenshots/dashboard-overview.png)
 
-This project generates realistic supplier procurement data, validates data quality, identifies known anomalies, and calculates explainable supplier reliability scores.
+### 3. CSV Upload
+![CSV Upload](screenshots/csv-upload.png)
 
-The system is designed to support transparent supplier evaluation and data-driven procurement decisions.
+### 4. Run Pipeline
+![Run Pipeline](screenshots/run-pipeline.png)
 
-## 2. Key Features
+### 5. Pipeline Output
+![Pipeline Output](screenshots/pipeline-output.png)
 
-- Synthetic supplier and procurement data generation.
-- Fixed-seed reproducible datasets.
-- Relational SQLite database.
-- Primary key and foreign key validation.
-- Data quality anomaly detection.
-- Supplier reliability scoring.
-- Missing-data-aware score calculation.
-- Separate ground-truth anomaly labels.
-- Automated unit and reproducibility tests.
-- CSV, JSON, SQLite, and SQL seed exports.
+### 6. CSV Download
+![CSV Download](screenshots/csv-download.png)
 
-## 3. Technology Stack
+### 7. Baseline Comparison
+![Baseline Comparison](screenshots/baseline-comparison.png)
 
-- Python 3
+### 8. Data Quality
+![Data Quality](screenshots/data-quality.png)
+
+### 9. Reports
+![Reports](screenshots/reports.png)
+
+### 10. Alerts
+![Alerts](screenshots/alerts.png)
+
+## ✨ Key Features
+
+- CSV dataset upload and processing
+- Data quality validation and monitoring
+- Pipeline execution and monitoring
+- Baseline comparison
+- Data quality alerts
+- Rejected records tracking
+- Data quality analytics and charts
+- Downloadable reports
+- Secure admin authentication
+- Supplier reliability monitoring
+
+## 🛠️ Technology Stack
+
+**Frontend**
+- React.js
+- Vite
+- JavaScript
+- HTML and CSS
+
+**Backend**
+- Python
+- FastAPI
+- REST APIs
+- JWT Authentication
+
+**Database**
 - SQLite
-- SQL
-- CSV and JSON
-- Pytest
-- Git and GitHub
 
-## 4. Supplier Scoring Model
+**Deployment**
+- Vercel – Frontend hosting
+- Render – Backend hosting
+- GitHub – Source code management
 
-The system evaluates suppliers using six dimensions.
-
-| Dimension | Weight |
-|---|---:|
-| Delivery | 30% |
-| Quality | 25% |
-| Cost | 15% |
-| Capacity | 10% |
-| Compliance | 10% |
-| Disruption | 10% |
-| **Total** | **100%** |
-
-The final score uses available metrics and renormalizes the remaining weights when data is missing.
-
-### Supplier Rating Categories
-
-| Score | Rating |
-|---|---|
-| 85–100 | Excellent |
-| 70–84.99 | Good |
-| 50–69.99 | Moderate |
-| Below 50 | Poor |
-
-## 5. Dataset Scale
-
-Baseline dataset:
-
-| Entity | Records |
-|---|---:|
-| Suppliers | 1,000 |
-| Purchase Orders | 10,000 |
-| Shipments | 15,000 |
-| Inspections | 20,000 |
-
-Additional entities include sites, contracts, PO lines, shipment lines, delivery events, invoices, and risk signals.
-
-The generator uses a fixed seed (`20261022`) to support reproducibility.
-
-## 6. Known Data Quality Scenarios
-
-The project includes five labelled anomaly scenarios:
-
-1. Shipment without a valid Purchase Order.
-2. Delivery date earlier than dispatch date.
-3. Supplier score using future data.
-4. Risk signal missing source and observation timestamp.
-5. Supplier site associated with the wrong supplier.
-
-Ground-truth labels are stored separately and are not used as scoring input features.
-
-Invalid records are detected through validation and database constraints.
-
-## 7. Project Structure
+## 📁 Project Structure
 
 ```text
 supplier-reliability-system/
 │
-├── data/
-│   ├── raw/
-│   ├── processed/
-│   └── ground_truth/
+├── backend/
+│   ├── auth/
+│   └── upload_routes.py
 │
-├── database/
-│   ├── supplier_reliability.db
-│   └── supplier_reliability_seed.sql
-│
-├── docs/
-│   ├── schema.md
-│   └── data_dictionary.md
-│
-├── reports/
+├── frontend/
+│   ├── src/
+│   ├── public/
+│   └── package.json
 │
 ├── src/
-│   ├── config.py
-│   ├── generate_data.py
-│   ├── database.py
-│   ├── validation.py
-│   ├── scoring.py
-│   ├── evaluation.py
-│   └── main.py
-│
+├── data/
+├── database/
+├── docs/
+├── reports/
+├── screenshots/
 ├── tests/
-│   ├── test_generation.py
-│   ├── test_validation.py
-│   ├── test_scoring.py
-│   └── test_reproducibility.py
 │
+├── api.py
+├── app.py
 ├── requirements.txt
+├── render.yaml
 ├── README.md
 └── .gitignore
 ```
 
-## 8. Installation
+## ⚙️ Local Installation
 
-Clone the repository:
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/RAJESHPAGIDIPALLI383/supplier-reliability-system.git
 cd supplier-reliability-system
 ```
 
-Create a virtual environment:
+### 2. Backend setup
 
 ```bash
 python -m venv .venv
 ```
 
-Activate it on Windows PowerShell:
+Activate the environment:
 
-```powershell
-.venv\Scripts\Activate.ps1
+```bash
+# Windows
+.venv\Scripts\activate
 ```
 
 Install dependencies:
@@ -177,105 +141,59 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-## 9. Run the Project
+Configure the required environment variables in a local `.env` file.
 
-Generate the synthetic dataset:
-
-```bash
-python -m src.generate_data
-```
-
-Run data validation:
+### 3. Start the backend
 
 ```bash
-python -m src.validation
+uvicorn api:app --reload
 ```
 
-Calculate supplier reliability scores:
+Backend: http://127.0.0.1:8000
+
+API documentation: http://127.0.0.1:8000/docs
+
+### 4. Frontend setup
 
 ```bash
-python -m src.scoring
+cd frontend
+npm install
 ```
 
-Create and populate the SQLite database and export SQL:
+Configure the frontend API URL using `VITE_API_BASE_URL` in the frontend environment configuration.
 
 ```bash
-python -m src.database
+npm run dev
 ```
 
-Run automated tests:
+## 🔐 Environment Variables
 
-```bash
-python -m pytest -v
-```
+Configure these variables in your deployment environment. Never commit actual secret values.
 
-## 10. Database and Data Quality
+**Backend**
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `JWT_SECRET_KEY`
+- `FRONTEND_URL`
 
-The SQLite database maintains relationships between suppliers, sites, purchase orders, shipments, inspections, invoices, and risk signals.
+**Frontend**
+- `VITE_API_BASE_URL`
 
-Foreign key constraints protect relational integrity.
+## ☁️ Deployment
 
-Invalid records rejected during import are preserved in the `data_quality_exceptions` table with their original record data and error message.
+- Frontend deployed using Vercel.
+- Backend deployed using Render.
+- Source code maintained in GitHub.
+- Backend health endpoint available for service monitoring.
 
-The database can be checked using:
+## 👨‍💻 Author
 
-```sql
-PRAGMA foreign_key_check;
-```
+**Rajesh Pagidipalli**
 
-## 11. Test Results
+GitHub: https://github.com/RAJESHPAGIDIPALLI383
 
-The current automated test suite has passed:
-
-**11 tests passed**
-
-The tests cover:
-
-- Required dataset record counts.
-- Unique supplier and purchase order identifiers.
-- Reproducible data generation.
-- Delivery score calculation.
-- Quality score calculation.
-- Cost score calculation.
-- Compliance score calculation.
-- Invalid risk signal exclusion.
-- Known anomaly detection.
-- Primary key and foreign key checks.
-
-## 12. Documentation
-
-- `docs/schema.md` - Database structure and relationships.
-- `docs/data_dictionary.md` - Dataset columns and descriptions.
-- `docs/source_manifest.md` - Synthetic data sources, generation details, and reproducibility information.
-
-## 13. Future Improvements
-
-- Interactive supplier monitoring dashboard.
-- Advanced supplier risk prediction.
-- Historical supplier performance trends.
-- API integration with procurement systems.
-- Automated supplier alerts and notifications.
-
-## 14. Project Objective
-
-The objective is to demonstrate how structured data generation, relational database design, data quality validation, and explainable scoring can support supplier reliability decisions.
+LinkedIn: https://www.linkedin.com/in/rajesh-pagidipalli-926774245
 
 ---
 
-**Project:** Supplier Reliability Scoring and Monitoring System  
-**Language:** Python  
-**Database:** SQLite  
-**Testing:** Pytest
-## Dashboard Screenshots
-
-### 1. Overview Dashboard
-![Overview Dashboard](screenshots/overview.png)
-
-### 2. Suppliers Dashboard
-![Suppliers Dashboard](screenshots/suppliers.png)
-
-### 3. Risk & Anomalies
-![Risk and Anomalies](screenshots/risk-anomalies.png)
-
-### 4. Data Explorer
-![Data Explorer](screenshots/data-explorer.png)
+⭐ If you find this project useful, consider giving it a star on GitHub.
