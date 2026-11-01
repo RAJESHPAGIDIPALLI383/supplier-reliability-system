@@ -1,0 +1,19 @@
+{
+    "seed": 20261022,
+    "generated_at": "2026-10-30T12:48:18.628567",
+    "row_counts": {
+        "suppliers.csv": 1000,
+        "sites.csv": 2035,
+        "contracts.csv": 1000,
+        "purchase_orders.csv": 10000,
+        "po_lines.csv": 10000,
+        "shipments.csv": 15002,
+        "shipment_lines.csv": 15000,
+        "delivery_events.csv": 30000,
+        "inspections.csv": 20000,
+        "invoices.csv": 10000,
+        "risk_signals.csv": 1000,
+        "site_anomaly_records.csv": 1
+    },
+    "anomaly_count": 5
+}

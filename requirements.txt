@@ -1,0 +1,10 @@
+
+pytest>=8.0
+streamlit
+pandas
+plotly
+fastapi
+uvicorn[standard]
+python-multipart
+PyJWT
+pwdlib[argon2]

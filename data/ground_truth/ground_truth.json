@@ -1,0 +1,32 @@
+[
+    {
+        "anomaly_id": "ANOM-001",
+        "record_id": "SHP-2026-ANOM001",
+        "anomaly_type": "SHIPMENT_WITHOUT_PO",
+        "expected_detection": "Shipment references a nonexistent purchase order"
+    },
+    {
+        "anomaly_id": "ANOM-002",
+        "record_id": "SHP-2026-ANOM002",
+        "anomaly_type": "DELIVERY_BEFORE_DISPATCH",
+        "expected_detection": "Actual delivery date is earlier than dispatch date"
+    },
+    {
+        "anomaly_id": "ANOM-004",
+        "record_id": "RSK-SUP-000001-2026-01",
+        "anomaly_type": "RISK_SIGNAL_MISSING_SOURCE_OR_TIME",
+        "expected_detection": "Risk signal has missing source and timestamp"
+    },
+    {
+        "anomaly_id": "ANOM-005",
+        "record_id": "SITE-SUP-000001-01",
+        "anomaly_type": "SUPPLIER_SITE_CONFLATION",
+        "expected_detection": "Site is associated with the wrong supplier"
+    },
+    {
+        "anomaly_id": "ANOM-003",
+        "record_id": "SCORE-2026-ANOM003",
+        "anomaly_type": "FUTURE_DATA_LEAKAGE",
+        "expected_detection": "Score includes source data after its as-of date"
+    }
+]

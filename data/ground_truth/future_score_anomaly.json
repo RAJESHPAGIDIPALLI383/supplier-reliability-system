@@ -1,0 +1,10 @@
+[
+    {
+        "score_id": "SCORE-2026-ANOM003",
+        "supplier_id": "SUP-000001",
+        "as_of_date": "2026-10-01",
+        "computed_at": "2026-10-22T12:00:00",
+        "source_data_max_date": "2026-10-15",
+        "overall_score": 95.0
+    }
+]
