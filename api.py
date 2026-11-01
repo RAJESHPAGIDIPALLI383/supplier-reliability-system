@@ -7,9 +7,13 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.auth.routes import router as auth_router
-from backend.auth.database import initialize_auth_db
+from backend.auth.database import (
+    initialize_auth_db,
+    get_user_by_email,
+    create_user
+)
+from backend.auth.security import hash_password
 from backend.upload_routes import router as upload_router
-
 
 # --------------------------------------------------
 # APPLICATION CONFIGURATION
@@ -151,6 +155,35 @@ app.include_router(upload_router)
 @app.on_event("startup")
 def startup_event():
     initialize_auth_db()
+
+    admin_email = os.getenv("ADMIN_EMAIL")
+    admin_password = os.getenv("ADMIN_PASSWORD")
+    admin_username = os.getenv("ADMIN_USERNAME", "admin")
+
+    if not admin_email or not admin_password:
+        raise RuntimeError(
+            "ADMIN_EMAIL and ADMIN_PASSWORD must be configured."
+        )
+
+    existing_user = get_user_by_email(admin_email)
+
+    if existing_user is None:
+        create_user(
+            username=admin_username,
+            email=admin_email,
+            password_hash=hash_password(admin_password),
+            role="admin"
+        )
+        print("Admin account created successfully.")
+
+    elif existing_user["role"] != "admin":
+        raise RuntimeError(
+            "Configured ADMIN_EMAIL already exists but is not an admin. "
+            "Resolve the account role before starting the service."
+        )
+
+    else:
+        print("Admin account already exists.")
 
     print("====================================")
     print("YottaFlex.ai API Started")
