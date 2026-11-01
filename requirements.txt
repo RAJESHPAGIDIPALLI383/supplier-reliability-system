@@ -8,3 +8,4 @@ uvicorn[standard]
 python-multipart
 PyJWT
 pwdlib[argon2]
+email-validator
